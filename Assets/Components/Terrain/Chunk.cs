@@ -11,7 +11,7 @@ namespace Antymology.Terrain
     /// </summary>
     public class Chunk : MonoBehaviour
     {
-
+        
         #region Fields
 
         /// <summary>
