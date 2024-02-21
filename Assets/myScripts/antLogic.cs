@@ -1,15 +1,17 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Runtime.CompilerServices;
 using Antymology.Terrain;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 
 public class antLogic : MonoBehaviour {
     public GameObject ant;
 
     public float health = 100.0f;
-    public float healthReduc = 1.0f;
+    public float healthReduc = 4.0f;
     
     private float jumpHeightForce = 5f; // This controls how high the ant jumps.
     private float jumpDistanceForce = 3f; // This controls how far forward the ant jumps.
@@ -96,14 +98,16 @@ public class antLogic : MonoBehaviour {
         while (true) {
             yield return new WaitForSeconds(2.0f);
             pickUpBlock();
+
             yield return new WaitForSeconds(1.5f);
             dropBlock();
+
         }
     }
     
     IEnumerator RoutineJump() {
         while (true) {
-            yield return new WaitForSeconds(1.0f);
+            yield return new WaitForSeconds(0.8f);
             jump();
         }
     }
@@ -142,6 +146,8 @@ public class antLogic : MonoBehaviour {
                 direction = ant.transform.position - averageNestDirection;
             }
 
+            // randomize direction a bit, not on y axis though
+            direction = new Vector3(direction.x + Random.Range(-5.0f, 5.0f), 0, direction.z + Random.Range(-5.0f, 5.0f));
             ant.transform.forward = new Vector3(direction.x, 0, direction.z);
             rb.constraints = RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
         }
@@ -172,7 +178,6 @@ public class antLogic : MonoBehaviour {
     private void hopAndDrop() {
         Rigidbody rb = ant.GetComponent<Rigidbody>();
         StartCoroutine(DropBlockAtApex(rb));
-        //heldBlock = null;
     }
     
     private IEnumerator ForwardAtApex(Rigidbody rb, float force) {
@@ -194,10 +199,12 @@ public class antLogic : MonoBehaviour {
         bool isCloseToGround = Physics.Raycast(ant.transform.position, Vector3.down, out hit, 1.5f); // Adjust the distance based on your game's scale
 
         if (isDescending && isCloseToGround && blockBelow is AirBlock) {
-            Debug.Log("Check!");
-            worldManager.SetBlock((int)blockBelowPos.x, (int)blockBelowPos.y, (int)blockBelowPos.z, new MulchBlock());
+            Vector3Int blockPos = Vector3Int.RoundToInt(blockBelowPos);
+            
+            worldManager.SetBlock(blockPos.x, blockPos.y, blockPos.z, new MulchBlock());
+            heldBlock = null;
         }
-        heldBlock = null;
+        
     }
 
 
@@ -363,7 +370,6 @@ public class antLogic : MonoBehaviour {
     }
 
     private void dropBlock() {
-        // if block below is not mulch and above is air, jump and drop block
         if (blockBelow is not MulchBlock) {
             hopAndDrop();
         } 
@@ -372,9 +378,17 @@ public class antLogic : MonoBehaviour {
 
     private void UnstuckFall() {
         if (ant.transform.position.y < 0.0f) {
-            ant.transform.position = new Vector3(averageNestDirection.x, 12.0f, averageNestDirection.z);
+            // move ant to any random surface block position
+            ant.transform.position = new Vector3(Random.Range(-15.0f, 15.0f), 12.0f, Random.Range(-15.0f, 15.0f));
+        }
+    }
+    
+    // breed ant: if worker ant touches queen ant, queen ant will give birth to a new worker ant
+    private void OnCollisionEnter(Collision collision) {
+        if (this.tag == "Queen" && collision.gameObject.tag == "Ant") {
+            GameObject newAnt = Instantiate(ant, new Vector3(Random.Range(-15.0f, 15.0f), 12.0f, Random.Range(-15.0f, 15.0f)), Quaternion.identity);
+            newAnt.tag = "Ant";
         }
     }
 
 }
-
