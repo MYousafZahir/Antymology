@@ -88,7 +88,32 @@ namespace Antymology.Terrain
         /// </summary>
         private void GenerateAnts()
         {
-            throw new NotImplementedException();
+            //throw new NotImplementedException();
+            // get 30 random surface blocks and place an ant on each. Surface means no block above it.
+            for (int i = 0; i < 34; i++)
+            {
+                int x = RNG.Next(0, Blocks.GetLength(0));
+                int z = RNG.Next(0, Blocks.GetLength(2));
+                int y = -1;
+                for (int j = Blocks.GetLength(1) - 1; j >= 0; j--)
+                {
+                    if (Blocks[x, j, z] as AirBlock == null)
+                    {
+                        y = j;
+                        break;
+                    }
+                }
+                if (y == -1)
+                {
+                    continue;
+                }
+                GameObject ant = Instantiate(antPrefab, new Vector3(x, y + 1, z), Quaternion.identity);
+                
+                
+                ant.transform.parent = transform;
+            }
+            
+
         }
 
         #endregion

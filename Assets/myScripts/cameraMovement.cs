@@ -7,13 +7,17 @@ public class cameraMovement : MonoBehaviour
 {
     // camera
     private Camera cam;
-    private float cameraSpeed = 5.0f; 
+    private float cameraSpeed = 5.0f;
+    private float sprintCameraSpeed = 20.0f;
     void Start() {
         cam = Camera.main;
     }
 
     void Update() {
         Vector3 moveDirection = Vector3.zero; // Initialize movement direction
+        
+        if (Input.GetKey(KeyCode.LeftShift)) cameraSpeed = sprintCameraSpeed; // Sprint
+        else cameraSpeed = 5.0f; // Walk
 
         // Movement controls
         if (Input.GetKey(KeyCode.Q)) moveDirection += Vector3.down;
