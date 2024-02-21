@@ -90,6 +90,8 @@ namespace Antymology.Terrain
         {
             //throw new NotImplementedException();
             // get 30 random surface blocks and place an ant on each. Surface means no block above it.
+            
+            // Ant implementation can be found in antLogic.cs.
             for (int i = 0; i < 200; i++)
             {
                 int x = RNG.Next(0, Blocks.GetLength(0));
