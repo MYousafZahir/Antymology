@@ -6,8 +6,8 @@ using UnityEngine;
 
 namespace Antymology.Terrain
 {
-    public class WorldManager : Singleton<WorldManager>
-    {
+    public class WorldManager : Singleton<WorldManager> {
+        public GameObject[] ants;
 
         #region Fields
 
@@ -90,7 +90,7 @@ namespace Antymology.Terrain
         {
             //throw new NotImplementedException();
             // get 30 random surface blocks and place an ant on each. Surface means no block above it.
-            for (int i = 0; i < 34; i++)
+            for (int i = 0; i < 5; i++)
             {
                 int x = RNG.Next(0, Blocks.GetLength(0));
                 int z = RNG.Next(0, Blocks.GetLength(2));
@@ -113,6 +113,11 @@ namespace Antymology.Terrain
                 ant.transform.parent = transform;
             }
             
+            // make array of all ants
+            ants = GameObject.FindGameObjectsWithTag("Ant");
+            
+            // make ants[0] tag "Queen"
+            ants[0].tag = "Queen";
 
         }
 

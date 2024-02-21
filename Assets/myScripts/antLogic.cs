@@ -15,12 +15,7 @@ public class antLogic : MonoBehaviour {
     private float jumpDistanceForce = 3f; // This controls how far forward the ant jumps.
     
     private float jumpCooldown = 0.0f;
-
-    private int north = 0;
-    private int east = 0;
-    private int south = 0;
-    private int west = 0;
-
+    
     private int facing = 0;
         
 
@@ -31,12 +26,22 @@ public class antLogic : MonoBehaviour {
     private WorldManager worldManager;
     private AbstractBlock blockBelow;
     private Vector3 blockBelowPos;
-    
+    private AbstractBlock heldBlock;
+    private bool isQueen;
 
     void Start() {
-        facing = north;
         ant = this.gameObject;
         worldManager = GameObject.Find("Manager").GetComponent<WorldManager>();
+
+        if (this.tag == "Ant") isQueen = false;
+        if (this.tag == "Queen") isQueen = true;
+
+        heldBlock = null;
+        
+        // make queen ant pink
+        if (isQueen) {
+            ant.GetComponent<Renderer>().material.color = Color.magenta;
+        }
 
     }
 
@@ -46,7 +51,9 @@ public class antLogic : MonoBehaviour {
 
         // keep backing up until it's not touching the wall in front of it.
         backUp();
+        checkDeath();
         calculateBlockBelow();
+        
         
         // debugging
         DrawDebugForwardLine();
@@ -56,12 +63,16 @@ public class antLogic : MonoBehaviour {
         }
         else {
             jump();
-            jumpCooldown = 1.5f;
+            jumpCooldown = 1f;
             
         }
         
         if (blockBelow is MulchBlock && health <= 93.0f) {
             consume();
+        }
+
+        if (isQueen && health >= 34.0f) {
+            createNest();
         }
         
         loseHealth();
@@ -138,7 +149,7 @@ public class antLogic : MonoBehaviour {
 
     private void consume() {
         if (blockBelow is MulchBlock) {
-            health = Mathf.Max(health + 10.0f,  100.0f);
+            health = Mathf.Min(health + 10.0f,  100.0f);
             worldManager.SetBlock((int)blockBelowPos.x, (int)blockBelowPos.y, (int)blockBelowPos.z, new AirBlock());
         }
     }
@@ -194,5 +205,30 @@ public class antLogic : MonoBehaviour {
     // draw debug line to show forward ant direction
     private void DrawDebugForwardLine() {
         Debug.DrawLine(ant.transform.position, ant.transform.position + ant.transform.forward, Color.red, 0.1f, false);
+    }
+    
+    private void checkDeath() {
+        if (health <= 0.0f || ant.transform.position.y < 0.0f) {
+            Destroy(ant);
+        }
+    }
+    
+    public void setQueen (bool queen) {
+        isQueen = queen;
+    }
+    
+    public void createNest() {
+        if (heldBlock is null && blockBelow is not ContainerBlock && blockBelow is not NestBlock) {
+            health -= 33.0f;
+            heldBlock = blockBelow;
+            worldManager.SetBlock((int)blockBelowPos.x, (int)blockBelowPos.y, (int)blockBelowPos.z, new NestBlock());
+            
+            Debug.Log("Nested");
+            
+        }  else if (heldBlock is not null && blockBelow is AirBlock) {
+            // set block below to held block
+            worldManager.SetBlock((int)blockBelowPos.x, (int)blockBelowPos.y, (int)blockBelowPos.z, heldBlock);
+            heldBlock = null;
+        }
     }
 }
