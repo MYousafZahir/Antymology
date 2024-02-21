@@ -15,12 +15,18 @@ public class antLogic : MonoBehaviour {
     private float jumpDistanceForce = 3f; // This controls how far forward the ant jumps.
     
     private float jumpCooldown = 0.0f;
+    private float hopCooldown = 0.0f;
+    private float directionCooldown = 0.0f;
+
+    private bool pickOrDrop = false;
+    private float timeBetweenPickandDrop = 4.0f;
     
     private int facing = 0;
         
 
 
     private Vector3 position;
+    private Vector3 averageNestDirection;
     
     // WorldManager
     private WorldManager worldManager;
@@ -28,6 +34,8 @@ public class antLogic : MonoBehaviour {
     private Vector3 blockBelowPos;
     private AbstractBlock heldBlock;
     private bool isQueen;
+
+    List<Vector3> nestPositions = new List<Vector3>();
 
     void Start() {
         ant = this.gameObject;
@@ -41,33 +49,38 @@ public class antLogic : MonoBehaviour {
         // make queen ant pink
         if (isQueen) {
             ant.GetComponent<Renderer>().material.color = Color.magenta;
+            averageNestDirection = Vector3.zero;
         }
+
+        StartCoroutine(RoutineJump());
+        StartCoroutine(RoutineNestRefresh());
+        StartCoroutine(RoutineBlockBehaviour());
+        StartCoroutine(RoutineUnstuck());
 
     }
 
     // Update is called once per frame
     void Update() {
         position = ant.transform.position;
+        
 
         // keep backing up until it's not touching the wall in front of it.
         backUp();
         checkDeath();
         calculateBlockBelow();
+        //directionSet();
         
         
         // debugging
         DrawDebugForwardLine();
         
-        if (jumpCooldown > 0.0f) {
-            jumpCooldown -= Time.deltaTime;
-        }
-        else {
-            jump();
-            jumpCooldown = 1f;
-            
+        // wiggle
+        if (blockBelow == null) {
+            // add a small force in a random direction
+            ant.GetComponent<Rigidbody>().AddForce(new Vector3(Random.Range(-0.3f, 0.3f), 0, Random.Range(-0.3f, 0.3f)), ForceMode.Impulse);
         }
         
-        if (blockBelow is MulchBlock && health <= 93.0f) {
+        if (blockBelow is MulchBlock && health <= 90.0f) {
             consume();
         }
 
@@ -76,7 +89,66 @@ public class antLogic : MonoBehaviour {
         }
         
         loseHealth();
+        UnstuckFall();  
     }
+    
+    IEnumerator RoutineBlockBehaviour() {
+        while (true) {
+            yield return new WaitForSeconds(2.0f);
+            pickUpBlock();
+            yield return new WaitForSeconds(1.5f);
+            dropBlock();
+        }
+    }
+    
+    IEnumerator RoutineJump() {
+        while (true) {
+            yield return new WaitForSeconds(1.0f);
+            jump();
+        }
+    }
+    
+    IEnumerator RoutineUnstuck() {
+        while (true) {
+            Vector3 lastPosition = ant.transform.position;
+            yield return new WaitForSeconds(5.0f);
+            if (lastPosition == ant.transform.position) {
+                ant.transform.position = new Vector3(ant.transform.position.x, ant.transform.position.y + 10, ant.transform.position.z);
+            }
+        }
+    }
+
+    IEnumerator RoutineNestRefresh() {
+        while (true) {
+            yield return new WaitForSeconds(5f);
+            if (isQueen) {
+                averageNestDirection = calculateAverageDirectionOfNest();
+            }
+            else {
+                averageNestDirection = GameObject.FindGameObjectWithTag("Queen").GetComponent<antLogic>()
+                    .averageNestDirection;
+            }
+
+            averageNestDirection = averageNestDirection +
+                                   new Vector3(Random.Range(-10.0f, 10.0f), 0, Random.Range(-10.0f, 10.0f));
+            
+            Rigidbody rb = ant.GetComponent<Rigidbody>();
+            rb.constraints &= ~RigidbodyConstraints.FreezeRotationY;
+            Vector3 direction;
+
+            if (heldBlock is null) {
+                direction = averageNestDirection - ant.transform.position;
+            } else {
+                direction = ant.transform.position - averageNestDirection;
+            }
+
+            ant.transform.forward = new Vector3(direction.x, 0, direction.z);
+            rb.constraints = RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
+        }
+
+    }
+    
+    
     
     private void jump() {
         int power = jumpPossible();
@@ -96,16 +168,42 @@ public class antLogic : MonoBehaviour {
             
         }
     }
+
+    private void hopAndDrop() {
+        Rigidbody rb = ant.GetComponent<Rigidbody>();
+        StartCoroutine(DropBlockAtApex(rb));
+        //heldBlock = null;
+    }
     
     private IEnumerator ForwardAtApex(Rigidbody rb, float force) {
         yield return new WaitUntil(() => rb.velocity.y > 0);
         yield return new WaitUntil(() => Mathf.Abs(rb.velocity.y) < 0.1f);
         rb.AddForce(rb.transform.forward * force, ForceMode.Impulse);
     }
+    
+    
+    private IEnumerator DropBlockAtApex(Rigidbody rb) {
+        // Wait until the ant is at the apex of its jump.
+        yield return new WaitUntil(() => rb.velocity.y > 0);
+        yield return new WaitUntil(() => Mathf.Abs(rb.velocity.y) < 0.1f);
+
+        // Check if the ant is starting to descend and is close enough to the ground.
+        // This could be adjusted based on the ant's jump height and the desired drop logic.
+        bool isDescending = rb.velocity.y <= 0;
+        RaycastHit hit;
+        bool isCloseToGround = Physics.Raycast(ant.transform.position, Vector3.down, out hit, 1.5f); // Adjust the distance based on your game's scale
+
+        if (isDescending && isCloseToGround && blockBelow is AirBlock) {
+            Debug.Log("Check!");
+            worldManager.SetBlock((int)blockBelowPos.x, (int)blockBelowPos.y, (int)blockBelowPos.z, new MulchBlock());
+        }
+        heldBlock = null;
+    }
+
 
     private void rotateAnt(Rigidbody rb) {
         rb.constraints &= ~RigidbodyConstraints.FreezeRotationY;
-        ant.transform.Rotate(0, 90, 0);
+        ant.transform.Rotate(0, 45, 0);
         rb.constraints = RigidbodyConstraints.FreezeRotationY | RigidbodyConstraints.FreezeRotationX | RigidbodyConstraints.FreezeRotationZ;
     }
 
@@ -155,6 +253,7 @@ public class antLogic : MonoBehaviour {
     }
     
     private void loseHealth() {
+        if (isQueen) return;
         float baseLoss = healthReduc * Time.deltaTime;
         health -=  (blockBelow is AcidicBlock) ? (baseLoss * 2) : (baseLoss);
     }
@@ -208,6 +307,11 @@ public class antLogic : MonoBehaviour {
     }
     
     private void checkDeath() {
+        // if is queen, don't die
+        if (isQueen) {
+            return;
+        }
+        
         if (health <= 0.0f || ant.transform.position.y < 0.0f) {
             Destroy(ant);
         }
@@ -222,13 +326,55 @@ public class antLogic : MonoBehaviour {
             health -= 33.0f;
             heldBlock = blockBelow;
             worldManager.SetBlock((int)blockBelowPos.x, (int)blockBelowPos.y, (int)blockBelowPos.z, new NestBlock());
+            // insert block into nestPositions
+            nestPositions.Add(blockBelowPos);
             
-            Debug.Log("Nested");
+            //Debug.Log("Nested");
             
         }  else if (heldBlock is not null && blockBelow is AirBlock) {
             // set block below to held block
-            worldManager.SetBlock((int)blockBelowPos.x, (int)blockBelowPos.y, (int)blockBelowPos.z, heldBlock);
+            worldManager.SetBlock((int)blockBelowPos.x, (int)blockBelowPos.y, (int)blockBelowPos.z, new MulchBlock());
             heldBlock = null;
         }
     }
+
+    public Vector3 calculateAverageDirectionOfNest() {
+        GameObject q = GameObject.FindGameObjectWithTag("Queen");
+        List<Vector3> nestPos = q.GetComponent<antLogic>().nestPositions;
+        
+        Vector3 average = Vector3.zero;
+        foreach (Vector3 pos in nestPos) {
+            average += pos;
+        }
+        
+        average /= nestPos.Count;
+        return average;
+    }
+
+
+    
+    private void pickUpBlock() {
+        if (heldBlock is null && blockBelow is MulchBlock) {
+            heldBlock = new MulchBlock();
+            
+            worldManager.SetBlock((int)blockBelowPos.x, (int)blockBelowPos.y, (int)blockBelowPos.z, new AirBlock());
+        }
+        
+    }
+
+    private void dropBlock() {
+        // if block below is not mulch and above is air, jump and drop block
+        if (blockBelow is not MulchBlock) {
+            hopAndDrop();
+        } 
+        
+    }
+
+    private void UnstuckFall() {
+        if (ant.transform.position.y < 0.0f) {
+            ant.transform.position = new Vector3(averageNestDirection.x, 12.0f, averageNestDirection.z);
+        }
+    }
+
 }
+
