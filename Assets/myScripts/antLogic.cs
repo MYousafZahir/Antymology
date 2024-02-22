@@ -37,7 +37,7 @@ public class antLogic : MonoBehaviour {
     private AbstractBlock heldBlock;
     private bool isQueen;
 
-    List<Vector3> nestPositions = new List<Vector3>();
+    public List<Vector3> nestPositions = new List<Vector3>();
 
     void Start() {
         ant = this.gameObject;
