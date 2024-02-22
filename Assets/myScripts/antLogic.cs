@@ -191,12 +191,10 @@ public class antLogic : MonoBehaviour {
         // Wait until the ant is at the apex of its jump.
         yield return new WaitUntil(() => rb.velocity.y > 0);
         yield return new WaitUntil(() => Mathf.Abs(rb.velocity.y) < 0.1f);
-
-        // Check if the ant is starting to descend and is close enough to the ground.
-        // This could be adjusted based on the ant's jump height and the desired drop logic.
+        
         bool isDescending = rb.velocity.y <= 0;
         RaycastHit hit;
-        bool isCloseToGround = Physics.Raycast(ant.transform.position, Vector3.down, out hit, 1.5f); // Adjust the distance based on your game's scale
+        bool isCloseToGround = Physics.Raycast(ant.transform.position, Vector3.down, out hit, 1.5f);
 
         if (isDescending && isCloseToGround && blockBelow is AirBlock) {
             Vector3Int blockPos = Vector3Int.RoundToInt(blockBelowPos);
@@ -275,17 +273,16 @@ public class antLogic : MonoBehaviour {
     private void calculateBlockBelow() {
         // Directly calculate the block position below the ant by rounding down the ant's position
         int x = Mathf.RoundToInt(ant.transform.position.x);
-        int y = Mathf.RoundToInt(ant.transform.position.y - 0.65f); // Adjust for the distance below the ant we want to check
+        int y = Mathf.RoundToInt(ant.transform.position.y - 0.65f);
         int z = Mathf.RoundToInt(ant.transform.position.z);
-
-        // Ensure y is not below the world (assuming y=0 is the lowest)
+        
         y = Mathf.Max(y, 0);
 
         blockBelow = worldManager.GetBlock(x, y, z);
         blockBelowPos = new Vector3(x, y, z);
 
         if (blockBelow != null) {
-            DrawDebugRectangle(new Vector3(x, y + 0.5f, z)); // Adjust y to visualize the block's top surface
+            DrawDebugRectangle(new Vector3(x, y + 0.5f, z)); 
         }
     }
 
