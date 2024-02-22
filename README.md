@@ -1,3 +1,33 @@
+# Antymology Implementation
+
+## UI
+### Camera Movement
+Forward - W <br>
+Left - A <br>
+Backward - S <br>
+Right - D <br>
+
+Vertically Up - E <br>
+Vertically Down - Q <br>
+
+### Information
+Number of Living Ants - Top Left of Screen <br>
+Number of Placed Nest Blocks - Top Left of Screen <br>
+
+## About
+
+### Goal
+The goal of this assignment was to make a relatively interesting ant colony to look at using Unity3D. 
+
+![anty](https://github.com/MYousafZahir/Antymology/assets/60854714/92b470f4-7863-4965-8d24-9c0d82345e5c)
+
+The colony consists of 200 ants, who can breed and die. All of the ants use physics based movement.
+There is 1 queen ant, who can lose health but cannot die. She is the only one capable of placing nest blocks.
+
+Watch the simulation as ants consume, dig, breed, and die!
+
+
+
 # Assignment 3: Antymology
 
 As we\'ve seen in class, ants exhibit very interesting behaviour. From finding the shortest path to building bridges out of bodies ants have evolved to produce complex emergents from very simple rules. For your assignment you will need to create a species of ant which is capable of generating the biggest nest possible.
